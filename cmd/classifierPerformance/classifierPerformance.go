@@ -22,12 +22,12 @@ import   "fmt"
 import   "bufio"
 import   "io"
 import   "log"
-import   "math"
 import   "os"
 import   "sort"
 import   "strconv"
 import   "strings"
 
+import . "github.com/pbenner/classifierPerformance/pkg/classifierPerformance"
 import   "github.com/pborman/getopt"
 
 /* -------------------------------------------------------------------------- */
@@ -65,26 +65,6 @@ func export_table3(config Config, writer io.Writer, x, y, z []float64, name_x, n
   for i := 0; i < len(x); i++ {
     fmt.Fprintf(writer, "%f %f %f\n", x[i], y[i], z[i])
   }
-}
-
-/* -------------------------------------------------------------------------- */
-
-type Predictions struct {
-  Values []float64
-  Labels []int
-}
-
-func (obj Predictions) Len() int {
-  return len(obj.Values)
-}
-
-func (obj Predictions) Swap(i, j int) {
-  obj.Values[i], obj.Values[j] = obj.Values[j], obj.Values[i]
-  obj.Labels[i], obj.Labels[j] = obj.Labels[j], obj.Labels[i]
-}
-
-func (obj Predictions) Less(i, j int) bool {
-  return obj.Values[i] < obj.Values[j]
 }
 
 /* -------------------------------------------------------------------------- */
@@ -169,146 +149,49 @@ func import_predictions(config Config, filename string) Predictions {
 
 /* -------------------------------------------------------------------------- */
 
-func compute_performance(config Config, predictions Predictions) ([]float64, []int, []int, []int, []int, int, int) {
-  n_pos := 0
-  n_neg := 0
-  n_pos_map := make(map[float64]int)
-  n_neg_map := make(map[float64]int)
-  for i, _ := range predictions.Values {
-    if predictions.Labels[i] == 1 {
-      n_pos += 1
-    }
-    if predictions.Labels[i] == 0 {
-      n_neg += 1
-    }
-    n_pos_map[predictions.Values[i]] = n_pos
-    n_neg_map[predictions.Values[i]] = n_neg
-  }
-  // create a list of unique thresholds
-  tr := []float64{}
-  for _, key := range predictions.Values {
-    tr = append(tr, key)
-  }
-  sort.Float64s(tr)
-  tp := make([]int, len(tr))
-  fp := make([]int, len(tr))
-  tn := make([]int, len(tr))
-  fn := make([]int, len(tr))
-  for i, t := range tr {
-    tp[i] = n_pos - n_pos_map[t]
-    fp[i] = n_neg - n_neg_map[t]
-    tn[i] = n_neg_map[t]
-    fn[i] = n_pos_map[t]
-  }
-  return tr, tp, fp, tn, fn, n_pos, n_neg
-}
-
-/* -------------------------------------------------------------------------- */
-
-func auc(x, y []float64) float64 {
-  n1 := len(x)
-  n2 := len(y)
-  if n1 != n2 {
-    panic("internal error")
-  }
-  result := 0.0
-
-  for i := 1; i < n1; i++ {
-    dx := math.Abs(x[i] - x[i-1])
-    dy := (y[i] + y[i-1])/2.0
-    result += dx*dy
-  }
-  return result
-}
-
-func compute_precision_recall(config Config, tp, fp, fn []int, n_pos, n_neg int) ([]float64, []float64) {
-  precision := make([]float64, len(tp))
-  recall    := make([]float64, len(tp))
-  for i := 0; i < len(precision); i++ {
-    if tp[i] > 0 {
-      recall   [i] = float64(tp[i])/float64(tp[i] + fn[i])
-      precision[i] = float64(tp[i])/float64(tp[i] + fp[i])
-    } else
-    if i > 0 {
-      precision[i] = precision[i-1]
-    }
-  }
-  if config.NormalizePrecision {
-    c := float64(n_pos)/float64(n_pos+n_neg)
-    for i := 0; i < len(precision); i++ {
-      precision[i] = (precision[i] - c)/(1.0 - c)
-    }
-  }
-  return recall, precision
-}
-
-func compute_roc(config Config, tp, fp []int, n_pos, n_neg int) ([]float64, []float64) {
-  tpr := make([]float64, len(tp))
-  fpr := make([]float64, len(tp))
-  for i := 0; i < len(tpr); i++ {
-    tpr[i] = float64(tp[i])/float64(n_pos)
-    fpr[i] = float64(fp[i])/float64(n_neg)
-  }
-  return fpr, tpr
-}
-
-func compute_optimum(config Config, tr, x, y []float64) int {
-  k := 0
-  v := math.Inf(-1)
-  for i := 0; i < len(tr); i++ {
-    if r := x[i]*y[i]; r > v {
-      v = r
-      k = i
-    }
-  }
-  return k
-}
-
-/* -------------------------------------------------------------------------- */
-
 func classifier_performance(config Config, filename, target string) {
   predictions := import_predictions(config, filename)
   if predictions.Len() == 0 {
     log.Fatalf("table `%s' is empty", filename)
   }
-  tr, tp, fp, _, fn, n_pos, n_neg := compute_performance(config, predictions)
+  tr, tp, fp, _, fn, n_pos, n_neg := ComputePerformance(predictions)
 
   switch strings.ToLower(target) {
   case "precision-recall":
-    recall, precision := compute_precision_recall(config, tp, fp, fn, n_pos, n_neg)
+    recall, precision := ComputePrecisionRecall(tp, fp, fn, n_pos, n_neg, config.NormalizePrecision)
     if config.PrintThresholds {
       export_table3(config, os.Stdout, recall, precision, tr, "recall", "precision", "threshold")
     } else {
       export_table2(config, os.Stdout, recall, precision, "recall", "precision")
     }
   case "precision-recall-auc":
-    recall, precision := compute_precision_recall(config, tp, fp, fn, n_pos, n_neg)
-    fmt.Println(auc(recall, precision))
+    recall, precision := ComputePrecisionRecall(tp, fp, fn, n_pos, n_neg, config.NormalizePrecision)
+    fmt.Println(AUC(recall, precision))
   case "roc":
-    fpr, tpr := compute_roc(config, tp, fp, n_pos, n_neg)
+    fpr, tpr := ComputeRoc(tp, fp, n_pos, n_neg)
     if config.PrintThresholds {
       export_table3(config, os.Stdout, fpr, tpr, tr, "FPR", "TPR", "threshold")
     } else {
       export_table2(config, os.Stdout, fpr, tpr, "FPR", "TPR")
     }
   case "roc-auc":
-    fpr, tpr := compute_roc(config, tp, fp, n_pos, n_neg)
-    fmt.Println(auc(fpr, tpr))
+    fpr, tpr := ComputeRoc(tp, fp, n_pos, n_neg)
+    fmt.Println(AUC(fpr, tpr))
   case "optimal-precision-recall":
-    recall, precision := compute_precision_recall(config, tp, fp, fn, n_pos, n_neg)
-    i        := compute_optimum(config, tr, recall, precision)
+    recall, precision := ComputePrecisionRecall(tp, fp, fn, n_pos, n_neg, config.NormalizePrecision)
+    i        := ComputeOptimum(tr, recall, precision)
     if config.Header {
       fmt.Printf("recall=%f precision=%f threshold=%f\n", recall[i], precision[i], tr[i])
     } else {
       fmt.Printf("%f %f %f\n", recall[i], precision[i], tr[i])
     }
   case "optimal-roc":
-    fpr, tpr := compute_roc(config, tp, fp, n_pos, n_neg)
+    fpr, tpr := ComputeRoc(tp, fp, n_pos, n_neg)
     fpr_inv  := make([]float64, len(fpr))
     for i := 0; i < len(fpr); i++ {
       fpr_inv[i] = 1.0 - fpr[i]
     }
-    i := compute_optimum(config, tr, fpr_inv, tpr)
+    i := ComputeOptimum(tr, fpr_inv, tpr)
     if config.Header {
       fmt.Printf("fpr=%f tpr=%f threshold=%f\n", fpr[i], tpr[i], tr[i])
     } else {
