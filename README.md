@@ -62,6 +62,6 @@ FPR TPR threshold
 
 Identify an optimal threshold by maximizing precision and recall:
 ```sh
-$ ./classifierPerformance --header optimal-precision-recall README.table | head
+$ ./classifierPerformance --header optimal-precision-recall README.table
 recall=0.849462 precision=0.831579 threshold=0.499788
 ```
