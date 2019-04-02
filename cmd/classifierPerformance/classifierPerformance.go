@@ -69,18 +69,19 @@ func export_table3(config Config, writer io.Writer, x, y, z []float64, name_x, n
 
 /* -------------------------------------------------------------------------- */
 
-func read_predictions(config Config, reader io.Reader) (Predictions, error) {
+func read_predictions(config Config, reader io.Reader) ([]float64, []int, error) {
   scanner := bufio.NewScanner(reader)
 
   i_predictions := -1
   i_labels      := -1
 
-  predictions := Predictions{}
+  values := []float64{}
+  labels := []int{}
 
   if scanner.Scan() {
     fields := strings.Fields(scanner.Text())
     if len(fields) != 2 {
-      return Predictions{}, fmt.Errorf("invalid predictions table")
+      return nil, nil, fmt.Errorf("invalid predictions table")
     }
     for i := 0; i < 2; i++ {
       if fields[i] == "predictions" || fields[i] == "prediction" {
@@ -93,10 +94,10 @@ func read_predictions(config Config, reader io.Reader) (Predictions, error) {
       }
     }
     if i_predictions == -1 {
-      return Predictions{}, fmt.Errorf("no column called `predictions' found")
+      return nil, nil, fmt.Errorf("no column called `predictions' found")
     }
     if i_labels == -1 {
-      return Predictions{}, fmt.Errorf("no column called `labels' found")
+      return nil, nil, fmt.Errorf("no column called `labels' found")
     }
   }
 
@@ -104,22 +105,22 @@ func read_predictions(config Config, reader io.Reader) (Predictions, error) {
   for scanner.Scan() {
     fields := strings.Fields(scanner.Text())
     label, err := strconv.ParseInt(fields[i_labels], 10, 64); if err != nil {
-      return Predictions{}, err
+      return nil, nil, err
     }
     value, err := strconv.ParseFloat(fields[i_predictions], 64); if err != nil {
-      return Predictions{}, err
+      return nil, nil, err
     }
     if label != 0 && label != 1 {
-      return Predictions{}, fmt.Errorf("invalid label `%d' observed", label)
+      return nil, nil, fmt.Errorf("invalid label `%d' observed", label)
     }
-    predictions.Values = append(predictions.Values, value)
-    predictions.Labels = append(predictions.Labels, int(label))
+    values = append(values, value)
+    labels = append(labels, int(label))
   }
-  sort.Sort(predictions)
-  return predictions, nil
+  sort.Sort(Predictions{values, labels})
+  return values, labels, nil
 }
 
-func import_predictions(config Config, filename string) Predictions {
+func import_predictions(config Config, filename string) ([]float64, []int) {
   var reader io.Reader
   if filename == "" {
     reader = os.Stdin
@@ -133,7 +134,7 @@ func import_predictions(config Config, filename string) Predictions {
     defer f.Close()
     reader = f
   }
-  if r, err := read_predictions(config, reader); err != nil {
+  if values, labels, err := read_predictions(config, reader); err != nil {
     if filename != "" {
       PrintStderr(config, 1, "failed\n")
     }
@@ -142,19 +143,19 @@ func import_predictions(config Config, filename string) Predictions {
     if filename != "" {
       PrintStderr(config, 1, "done\n")
     }
-    return r
+    return values, labels
   }
-  return Predictions{}
+  return nil, nil
 }
 
 /* -------------------------------------------------------------------------- */
 
 func classifier_performance(config Config, filename, target string) {
-  predictions := import_predictions(config, filename)
-  if predictions.Len() == 0 {
+  values, labels := import_predictions(config, filename)
+  if len(values) == 0 {
     log.Fatalf("table `%s' is empty", filename)
   }
-  tr, tp, fp, _, fn, n_pos, n_neg := ComputePerformance(predictions)
+  tr, tp, fp, _, fn, n_pos, n_neg := ComputePerformance(values, labels)
 
   switch strings.ToLower(target) {
   case "precision-recall":

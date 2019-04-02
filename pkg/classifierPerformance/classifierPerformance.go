@@ -44,24 +44,24 @@ func (obj Predictions) Less(i, j int) bool {
 
 /* -------------------------------------------------------------------------- */
 
-func ComputePerformance(predictions Predictions) ([]float64, []int, []int, []int, []int, int, int) {
+func ComputePerformance(values []float64, labels []int) ([]float64, []int, []int, []int, []int, int, int) {
   n_pos := 0
   n_neg := 0
   n_pos_map := make(map[float64]int)
   n_neg_map := make(map[float64]int)
-  for i, _ := range predictions.Values {
-    if predictions.Labels[i] == 1 {
+  for i, _ := range values {
+    if labels[i] == 1 {
       n_pos += 1
     }
-    if predictions.Labels[i] == 0 {
+    if labels[i] == 0 {
       n_neg += 1
     }
-    n_pos_map[predictions.Values[i]] = n_pos
-    n_neg_map[predictions.Values[i]] = n_neg
+    n_pos_map[values[i]] = n_pos
+    n_neg_map[values[i]] = n_neg
   }
   // create a list of unique thresholds
   tr := []float64{}
-  for _, key := range predictions.Values {
+  for _, key := range values {
     tr = append(tr, key)
   }
   sort.Float64s(tr)
