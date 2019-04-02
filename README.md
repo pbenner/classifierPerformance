@@ -3,7 +3,7 @@
 Prediction results must be given as a table in the following format:
 ```sh
 $ head README.table 
-predictions labels
+prediction label
 0.612547843484208 1
 0.364270970690995 1
 0.432136141695082 0
