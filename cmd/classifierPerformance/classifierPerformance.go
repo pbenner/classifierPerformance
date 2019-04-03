@@ -33,8 +33,8 @@ import   "github.com/pborman/getopt"
 /* -------------------------------------------------------------------------- */
 
 type Config struct {
-  Header             bool
   NormalizePrecision bool
+  PrintHeader        bool
   PrintThresholds    bool
   Verbose            int
 }
@@ -50,7 +50,7 @@ func PrintStderr(config Config, level int, format string, args ...interface{}) {
 /* -------------------------------------------------------------------------- */
 
 func export_table2(config Config, writer io.Writer, x, y []float64, name_x, name_y string) {
-  if config.Header {
+  if config.PrintHeader {
     fmt.Fprintf(writer, "%s %s\n", name_x, name_y)
   }
   for i := 0; i < len(x); i++ {
@@ -59,7 +59,7 @@ func export_table2(config Config, writer io.Writer, x, y []float64, name_x, name
 }
 
 func export_table3(config Config, writer io.Writer, x, y, z []float64, name_x, name_y, name_z string) {
-  if config.Header {
+  if config.PrintHeader {
     fmt.Fprintf(writer, "%s %s %s\n", name_x, name_y, name_z)
   }
   for i := 0; i < len(x); i++ {
@@ -181,7 +181,7 @@ func classifier_performance(config Config, filename, target string) {
   case "optimal-precision-recall":
     recall, precision := ComputePrecisionRecall(tp, fp, fn, n_pos, n_neg, config.NormalizePrecision)
     i        := ComputeOptimum(tr, recall, precision)
-    if config.Header {
+    if config.PrintHeader {
       fmt.Printf("recall=%f precision=%f threshold=%f\n", recall[i], precision[i], tr[i])
     } else {
       fmt.Printf("%f %f %f\n", recall[i], precision[i], tr[i])
@@ -193,7 +193,7 @@ func classifier_performance(config Config, filename, target string) {
       fpr_inv[i] = 1.0 - fpr[i]
     }
     i := ComputeOptimum(tr, fpr_inv, tpr)
-    if config.Header {
+    if config.PrintHeader {
       fmt.Printf("fpr=%f tpr=%f threshold=%f\n", fpr[i], tpr[i], tr[i])
     } else {
       fmt.Printf("%f %f %f\n", fpr[i], tpr[i], tr[i])
@@ -211,8 +211,8 @@ func main() {
   config  := Config{}
   options := getopt.New()
 
-  optHeader        := options.   BoolLong("header",               0,    "print header")
   optNormalizePrec := options.   BoolLong("normalize-precision",  0,    "normalize precision to the interval [0,1]")
+  optPrintHeader   := options.   BoolLong("print-header",         0,    "print header")
   optPrintThr      := options.   BoolLong("print-thresholds",     0,    "print addition column with thresholds")
   optVerbose       := options.CounterLong("verbose",             'v',   "verbose level [-v or -vv]")
   optHelp          := options.   BoolLong("help",                'h',   "print help")
@@ -240,7 +240,7 @@ func main() {
     options.PrintUsage(os.Stderr)
     os.Exit(1)
   }
-  config.Header             = *optHeader
+  config.PrintHeader        = *optPrintHeader
   config.PrintThresholds    = *optPrintThr
   config.NormalizePrecision = *optNormalizePrec
   config.PrintThresholds    = *optPrintThr

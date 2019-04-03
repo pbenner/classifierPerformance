@@ -17,7 +17,7 @@ prediction label
 
 Compute the precision-recall curve:
 ```sh
-$ classifierPerformance --header precision-recall README.table | head
+$ classifierPerformance --print-header precision-recall README.table | head
 recall precision
 0.989247 0.462312
 0.989247 0.464646
@@ -32,7 +32,7 @@ recall precision
 
 Print thresholds columns:
 ```sh
-$ classifierPerformance --header --print-thresholds precision-recall README.table | head
+$ classifierPerformance --print-header --print-thresholds precision-recall README.table | head
 recall precision threshold
 0.989247 0.462312 0.005423
 0.989247 0.464646 0.007746
@@ -47,12 +47,12 @@ recall precision threshold
 
 Plot precision recall curve and save it as *Rplots.pdf*:
 ```sh
-classifierPerformance --header precision-recall README.table | Rscript -e 't <- read.table(file("stdin"), header=T); plot(precision ~ recall, t, type="l")'
+classifierPerformance --print-header precision-recall README.table | Rscript -e 't <- read.table(file("stdin"), header=T); plot(precision ~ recall, t, type="l")'
 ```
 
 Compute ROC curve:
 ```sh
-$ classifierPerformance --header --print-thresholds roc README.table | head
+$ classifierPerformance --print-header --print-thresholds roc README.table | head
 FPR TPR threshold
 1.000000 0.989247 0.005423
 0.990654 0.989247 0.007746
@@ -67,6 +67,6 @@ FPR TPR threshold
 
 Identify an optimal threshold by maximizing precision and recall:
 ```sh
-$ classifierPerformance --header optimal-precision-recall README.table
+$ classifierPerformance --print-header optimal-precision-recall README.table
 recall=0.849462 precision=0.831579 threshold=0.499788
 ```
