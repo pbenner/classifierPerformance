@@ -61,8 +61,8 @@ func ComputePerformance(values []float64, labels []int) ([]float64, []int, []int
   }
   // create a list of unique thresholds
   tr := []float64{}
-  for _, key := range values {
-    tr = append(tr, key)
+  for v, _ := range n_pos_map {
+    tr = append(tr, v)
   }
   sort.Float64s(tr)
   tp := make([]int, len(tr))
