@@ -23,7 +23,6 @@ import   "bufio"
 import   "io"
 import   "log"
 import   "os"
-import   "sort"
 import   "strconv"
 import   "strings"
 
@@ -116,7 +115,6 @@ func read_predictions(config Config, reader io.Reader) ([]float64, []int, error)
     values = append(values, value)
     labels = append(labels, int(label))
   }
-  sort.Sort(Predictions{values, labels})
   return values, labels, nil
 }
 

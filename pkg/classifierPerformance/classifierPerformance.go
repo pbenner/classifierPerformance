@@ -45,6 +45,7 @@ func (obj Predictions) Less(i, j int) bool {
 /* -------------------------------------------------------------------------- */
 
 func ComputePerformance(values []float64, labels []int) ([]float64, []int, []int, []int, []int, int, int) {
+  sort.Sort(Predictions{values, labels})
   n_pos := 0
   n_neg := 0
   n_pos_map := make(map[float64]int)
