@@ -153,7 +153,9 @@ func classifier_performance(config Config, filename, target string) {
   if len(values) == 0 {
     log.Fatalf("table `%s' is empty", filename)
   }
-  perf := ComputePerformance(values, labels)
+  perf, err := ComputePerformance(values, labels); if err != nil {
+    log.Fatal(err)
+  }
 
   switch strings.ToLower(target) {
   case "precision-recall":

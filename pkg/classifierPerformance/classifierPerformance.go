@@ -18,7 +18,7 @@ package classifierPerformance
 
 /* -------------------------------------------------------------------------- */
 
-//import   "fmt"
+import   "fmt"
 import   "math"
 import   "sort"
 
@@ -59,7 +59,7 @@ func (obj Performance) Len() int {
 
 /* -------------------------------------------------------------------------- */
 
-func ComputePerformance(values []float64, labels []int) Performance {
+func ComputePerformance(values []float64, labels []int) (Performance, error) {
   sort.Sort(Predictions{values, labels})
   n_pos := 0
   n_neg := 0
@@ -68,9 +68,11 @@ func ComputePerformance(values []float64, labels []int) Performance {
   for i, _ := range values {
     if labels[i] == 1 {
       n_pos += 1
-    }
+    } else
     if labels[i] == 0 {
       n_neg += 1
+    } else {
+      return Performance{}, fmt.Errorf("invalid label: %d", labels[i])
     }
     n_pos_map[values[i]] = n_pos
     n_neg_map[values[i]] = n_neg
@@ -91,7 +93,7 @@ func ComputePerformance(values []float64, labels []int) Performance {
     tn[i] = n_neg_map[t]
     fn[i] = n_pos_map[t]
   }
-  return Performance{Tr: tr, Tp: tp, Fp: fp, Tn: tn, Fn: fn, P: n_pos, N: n_neg}
+  return Performance{Tr: tr, Tp: tp, Fp: fp, Tn: tn, Fn: fn, P: n_pos, N: n_neg}, nil
 }
 
 /* -------------------------------------------------------------------------- */
