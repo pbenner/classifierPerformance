@@ -44,7 +44,22 @@ func (obj Predictions) Less(i, j int) bool {
 
 /* -------------------------------------------------------------------------- */
 
-func ComputePerformance(values []float64, labels []int) ([]float64, []int, []int, []int, []int, int, int) {
+type Performance struct {
+  Tr []float64
+  Tp []int
+  Fp []int
+  Tn []int
+  Fn []int
+  P, N int
+}
+
+func (obj Performance) Len() int {
+  return len(obj.Tr)
+}
+
+/* -------------------------------------------------------------------------- */
+
+func ComputePerformance(values []float64, labels []int) Performance {
   sort.Sort(Predictions{values, labels})
   n_pos := 0
   n_neg := 0
@@ -76,7 +91,7 @@ func ComputePerformance(values []float64, labels []int) ([]float64, []int, []int
     tn[i] = n_neg_map[t]
     fn[i] = n_pos_map[t]
   }
-  return tr, tp, fp, tn, fn, n_pos, n_neg
+  return Performance{Tr: tr, Tp: tp, Fp: fp, Tn: tn, Fn: fn, P: n_pos, N: n_neg}
 }
 
 /* -------------------------------------------------------------------------- */
@@ -97,20 +112,20 @@ func AUC(x, y []float64) float64 {
   return result
 }
 
-func ComputePrecisionRecall(tp, fp, fn []int, n_pos, n_neg int, normalize bool) ([]float64, []float64) {
-  precision := make([]float64, len(tp))
-  recall    := make([]float64, len(tp))
+func ComputePrecisionRecall(perf Performance, normalize bool) ([]float64, []float64) {
+  precision := make([]float64, perf.Len())
+  recall    := make([]float64, perf.Len())
   for i := 0; i < len(precision); i++ {
-    if tp[i] > 0 {
-      recall   [i] = float64(tp[i])/float64(tp[i] + fn[i])
-      precision[i] = float64(tp[i])/float64(tp[i] + fp[i])
+    if perf.Tp[i] > 0 {
+      recall   [i] = float64(perf.Tp[i])/float64(perf.Tp[i] + perf.Fn[i])
+      precision[i] = float64(perf.Tp[i])/float64(perf.Tp[i] + perf.Fp[i])
     } else
     if i > 0 {
       precision[i] = precision[i-1]
     }
   }
   if normalize {
-    c := float64(n_pos)/float64(n_pos+n_neg)
+    c := float64(perf.P)/float64(perf.P+perf.N)
     for i := 0; i < len(precision); i++ {
       precision[i] = (precision[i] - c)/(1.0 - c)
     }
@@ -118,12 +133,12 @@ func ComputePrecisionRecall(tp, fp, fn []int, n_pos, n_neg int, normalize bool) 
   return recall, precision
 }
 
-func ComputeRoc(tp, fp []int, n_pos, n_neg int) ([]float64, []float64) {
-  tpr := make([]float64, len(tp))
-  fpr := make([]float64, len(tp))
+func ComputeRoc(perf Performance) ([]float64, []float64) {
+  tpr := make([]float64, perf.Len())
+  fpr := make([]float64, perf.Len())
   for i := 0; i < len(tpr); i++ {
-    tpr[i] = float64(tp[i])/float64(n_pos)
-    fpr[i] = float64(fp[i])/float64(n_neg)
+    tpr[i] = float64(perf.Tp[i])/float64(perf.P)
+    fpr[i] = float64(perf.Fp[i])/float64(perf.N)
   }
   return fpr, tpr
 }

@@ -153,48 +153,48 @@ func classifier_performance(config Config, filename, target string) {
   if len(values) == 0 {
     log.Fatalf("table `%s' is empty", filename)
   }
-  tr, tp, fp, _, fn, n_pos, n_neg := ComputePerformance(values, labels)
+  perf := ComputePerformance(values, labels)
 
   switch strings.ToLower(target) {
   case "precision-recall":
-    recall, precision := ComputePrecisionRecall(tp, fp, fn, n_pos, n_neg, config.NormalizePrecision)
+    recall, precision := ComputePrecisionRecall(perf, config.NormalizePrecision)
     if config.PrintThresholds {
-      export_table3(config, os.Stdout, recall, precision, tr, "recall", "precision", "threshold")
+      export_table3(config, os.Stdout, recall, precision, perf.Tr, "recall", "precision", "threshold")
     } else {
       export_table2(config, os.Stdout, recall, precision, "recall", "precision")
     }
   case "precision-recall-auc":
-    recall, precision := ComputePrecisionRecall(tp, fp, fn, n_pos, n_neg, config.NormalizePrecision)
+    recall, precision := ComputePrecisionRecall(perf, config.NormalizePrecision)
     fmt.Println(AUC(recall, precision))
   case "roc":
-    fpr, tpr := ComputeRoc(tp, fp, n_pos, n_neg)
+    fpr, tpr := ComputeRoc(perf)
     if config.PrintThresholds {
-      export_table3(config, os.Stdout, fpr, tpr, tr, "FPR", "TPR", "threshold")
+      export_table3(config, os.Stdout, fpr, tpr, perf.Tr, "FPR", "TPR", "threshold")
     } else {
       export_table2(config, os.Stdout, fpr, tpr, "FPR", "TPR")
     }
   case "roc-auc":
-    fpr, tpr := ComputeRoc(tp, fp, n_pos, n_neg)
+    fpr, tpr := ComputeRoc(perf)
     fmt.Println(AUC(fpr, tpr))
   case "optimal-precision-recall":
-    recall, precision := ComputePrecisionRecall(tp, fp, fn, n_pos, n_neg, config.NormalizePrecision)
-    i        := ComputeOptimum(tr, recall, precision)
+    recall, precision := ComputePrecisionRecall(perf, config.NormalizePrecision)
+    i        := ComputeOptimum(perf.Tr, recall, precision)
     if config.PrintHeader {
-      fmt.Printf("recall=%f precision=%f threshold=%f\n", recall[i], precision[i], tr[i])
+      fmt.Printf("recall=%f precision=%f threshold=%f\n", recall[i], precision[i], perf.Tr[i])
     } else {
-      fmt.Printf("%f %f %f\n", recall[i], precision[i], tr[i])
+      fmt.Printf("%f %f %f\n", recall[i], precision[i], perf.Tr[i])
     }
   case "optimal-roc":
-    fpr, tpr := ComputeRoc(tp, fp, n_pos, n_neg)
+    fpr, tpr := ComputeRoc(perf)
     fpr_inv  := make([]float64, len(fpr))
     for i := 0; i < len(fpr); i++ {
       fpr_inv[i] = 1.0 - fpr[i]
     }
-    i := ComputeOptimum(tr, fpr_inv, tpr)
+    i := ComputeOptimum(perf.Tr, fpr_inv, tpr)
     if config.PrintHeader {
-      fmt.Printf("fpr=%f tpr=%f threshold=%f\n", fpr[i], tpr[i], tr[i])
+      fmt.Printf("fpr=%f tpr=%f threshold=%f\n", fpr[i], tpr[i], perf.Tr[i])
     } else {
-      fmt.Printf("%f %f %f\n", fpr[i], tpr[i], tr[i])
+      fmt.Printf("%f %f %f\n", fpr[i], tpr[i], perf.Tr[i])
     }
   default:
     log.Fatalf("invalid target: %s", target)
