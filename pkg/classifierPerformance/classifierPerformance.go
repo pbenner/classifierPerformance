@@ -22,6 +22,63 @@ import   "fmt"
 import   "math"
 import   "sort"
 
+import   "bufio"
+import   "io"
+import   "strconv"
+import   "strings"
+
+/* -------------------------------------------------------------------------- */
+
+func ReadPredictions(reader io.Reader) ([]float64, []int, error) {
+  scanner := bufio.NewScanner(reader)
+
+  i_predictions := -1
+  i_labels      := -1
+
+  values := []float64{}
+  labels := []int{}
+
+  if scanner.Scan() {
+    fields := strings.Fields(scanner.Text())
+    if len(fields) != 2 {
+      return nil, nil, fmt.Errorf("invalid predictions table")
+    }
+    for i := 0; i < 2; i++ {
+      if fields[i] == "predictions" || fields[i] == "prediction" {
+        i_predictions = i
+      }
+    }
+    for i := 0; i < 2; i++ {
+      if fields[i] == "labels" || fields[i] == "label" {
+        i_labels = i
+      }
+    }
+    if i_predictions == -1 {
+      return nil, nil, fmt.Errorf("no column called `predictions' found")
+    }
+    if i_labels == -1 {
+      return nil, nil, fmt.Errorf("no column called `labels' found")
+    }
+  }
+
+  // read header
+  for scanner.Scan() {
+    fields := strings.Fields(scanner.Text())
+    label, err := strconv.ParseInt(fields[i_labels], 10, 64); if err != nil {
+      return nil, nil, err
+    }
+    value, err := strconv.ParseFloat(fields[i_predictions], 64); if err != nil {
+      return nil, nil, err
+    }
+    if label != 0 && label != 1 {
+      return nil, nil, fmt.Errorf("invalid label `%d' observed", label)
+    }
+    values = append(values, value)
+    labels = append(labels, int(label))
+  }
+  return values, labels, nil
+}
+
 /* -------------------------------------------------------------------------- */
 
 type Predictions struct {
