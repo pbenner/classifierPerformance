@@ -59,7 +59,7 @@ func (obj Performance) Len() int {
 
 /* -------------------------------------------------------------------------- */
 
-func ComputePerformance(values []float64, labels []int) (Performance, error) {
+func EvalPerformance(values []float64, labels []int) (Performance, error) {
   sort.Sort(Predictions{values, labels})
   n_pos := 0
   n_neg := 0
@@ -96,25 +96,27 @@ func ComputePerformance(values []float64, labels []int) (Performance, error) {
   return Performance{Tr: tr, Tp: tp, Fp: fp, Tn: tn, Fn: fn, P: n_pos, N: n_neg}, nil
 }
 
-/* -------------------------------------------------------------------------- */
-
-func AUC(x, y []float64) float64 {
-  n1 := len(x)
-  n2 := len(y)
-  if n1 != n2 {
-    panic("internal error")
+func EvalPrecisionRecall(values []float64, labels []int, normalize bool) ([]float64, []float64, error) {
+  if perf, err := EvalPerformance(values, labels); err != nil {
+    return nil, nil, err
+  } else {
+    r, p := PrecisionRecall(perf, normalize)
+    return r, p, nil
   }
-  result := 0.0
-
-  for i := 1; i < n1; i++ {
-    dx := math.Abs(x[i] - x[i-1])
-    dy := (y[i] + y[i-1])/2.0
-    result += dx*dy
-  }
-  return result
 }
 
-func ComputePrecisionRecall(perf Performance, normalize bool) ([]float64, []float64) {
+func EvalRoc(values []float64, labels []int) ([]float64, []float64, error) {
+  if perf, err := EvalPerformance(values, labels); err != nil {
+    return nil, nil, err
+  } else {
+    r, p := Roc(perf)
+    return r, p, nil
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+
+func PrecisionRecall(perf Performance, normalize bool) ([]float64, []float64) {
   precision := make([]float64, perf.Len())
   recall    := make([]float64, perf.Len())
   for i := 0; i < len(precision); i++ {
@@ -135,7 +137,7 @@ func ComputePrecisionRecall(perf Performance, normalize bool) ([]float64, []floa
   return recall, precision
 }
 
-func ComputeRoc(perf Performance) ([]float64, []float64) {
+func Roc(perf Performance) ([]float64, []float64) {
   tpr := make([]float64, perf.Len())
   fpr := make([]float64, perf.Len())
   for i := 0; i < len(tpr); i++ {
@@ -145,7 +147,25 @@ func ComputeRoc(perf Performance) ([]float64, []float64) {
   return fpr, tpr
 }
 
-func ComputeOptimum(tr, x, y []float64) int {
+/* -------------------------------------------------------------------------- */
+
+func AUC(x, y []float64) float64 {
+  n1 := len(x)
+  n2 := len(y)
+  if n1 != n2 {
+    panic("internal error")
+  }
+  result := 0.0
+
+  for i := 1; i < n1; i++ {
+    dx := math.Abs(x[i] - x[i-1])
+    dy := (y[i] + y[i-1])/2.0
+    result += dx*dy
+  }
+  return result
+}
+
+func Optimum(tr, x, y []float64) int {
   k := 0
   v := math.Inf(-1)
   for i := 0; i < len(tr); i++ {
